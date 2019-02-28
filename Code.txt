@@ -1,0 +1,150 @@
+#from google.colab import files
+#uploaded = files.upload()
+
+import pandas as pd
+import io
+import matplotlib.pyplot as plt
+from sklearn import preprocessing
+from sklearn.linear_model import LinearRegression
+import numpy as np
+import seaborn as sns
+
+#batting
+df = pd.read_csv(io.BytesIO(uploaded['Batting.csv']),sep='\t',encoding='utf-8',engine='python')
+
+df.describe()
+
+df=df.drop(['Player','Span','Runs','NO','Mat','Inns'],axis=1)
+#df=df.drop(['International Ranking','SR','0s','Mat','BF','Inns'],axis=1)
+#mport seaborn as sns
+df_corr=df.corr()
+sns.heatmap(df_corr,annot= True)
+
+from sklearn.feature_selection import SelectKBest
+from sklearn.feature_selection import chi2
+train_set=df.iloc[:,0:-1]
+train_labels =df.iloc[:,-1]
+
+test = SelectKBest(score_func=chi2, k=4)
+fit = test.fit(train_set, train_labels)
+# summarize scores
+np.set_printoptions(precision=3)
+print(fit.scores_)
+
+#innings
+df = pd.read_csv(io.BytesIO(uploaded['InningWIseStats.csv']),sep=',',engine='python')
+df.describe()
+df=df.drop(['RPO'],axis=1)
+df_corr=df.corr()
+sns.heatmap(df_corr,annot= True)
+
+
+
+min_max_scaler = preprocessing.MinMaxScaler()
+x = df[['BF']].values.astype(float)
+np_scaled = min_max_scaler.fit_transform(x)
+df['BF']=np_scaled
+
+x = df[['SR']].values.astype(float)
+np_scaled = min_max_scaler.fit_transform(x)
+df['SR']=np_scaled
+
+df.describe()
+df=df.drop(['Player','Span'],axis=1)
+#df=df.drop(['International Ranking','SR','0s','Mat','BF','Inns'],axis=1)
+#mport seaborn as sns
+df_corr=df.corr()
+sns.heatmap(df_corr,annot= True)
+
+#df.sort_values(by=['Ave','6s','4s','100','50'],ascending=False)
+
+# feature extraction
+from sklearn.feature_selection import SelectKBest
+from sklearn.feature_selection import chi2
+train_set=df.loc[:,['Ave','6s','4s','100','50','Mat','Inns','NO','HS','BF','SR','0s']]
+train_labels =pd.DataFrame(df['Runs'])
+
+
+
+#random forest
+from sklearn.ensemble import ExtraTreesClassifier
+model = ExtraTreesClassifier()
+model.fit(train_set, train_labels)
+print(model.feature_importances_)
+
+
+
+#BF,Ave,4s,HS,6s,SR,NO,0s,Inns,50,100,Mat
+
+
+train_set= pd.DataFrame(df[['HS','Ave','100','50','4s','6s']])
+train_labels =pd.DataFrame(df['Runs'])
+
+from sklearn.model_selection import train_test_split
+X_train,X_test,Y_train,Y_test = train_test_split(train_set,train_labels,test_size=1/3,random_state=0)
+
+print(X_train.shape)
+print(X_test.shape)
+print(Y_train.shape)
+print(Y_test.shape)
+
+lin_reg = LinearRegression()
+
+lin_reg.fit(X_train, Y_train)
+
+y_pred= lin_reg.predict(X_test)
+y_pred
+
+#plt.scatter(X_train['HS'],Y_train['Runs'],color='blue')
+#plt.plot(X_train['HS'],lin_reg.predict(X_train['HS']),color='blue')
+#plt.show()
+
+plt.scatter(X_test.Ave, Y_test.Runs,  color='black')
+#plt.plot(X_test.Ave, y_pred, color='blue', linewidth=3)
+
+#plt.xticks(())
+#plt.yticks(())
+plt.show()
+
+lin_reg = LinearRegression()
+
+lin_reg.fit(train_set, train_labels)
+
+y_pred= lin_reg.predict(X_test)
+y_pred
+
+plt.scatter(X_train['HS'],Y_train['Runs'],color='blue')
+plt.plot(X_train['HS'],lin_reg.predict(X_train['HS']),color='blue')
+plt.show()
+
+
+
+
+#Univariate
+test = SelectKBest(score_func=chi2, k=4)
+fit = test.fit(train_set, train_labels)
+# summarize scores
+np.set_printoptions(precision=3)
+print(fit.scores_)
+
+features = fit.transform(train_set)
+print(features)
+
+#6,4,Inns,HS
+
+#logistic regression
+from sklearn.feature_selection import RFE
+from sklearn.linear_model import LogisticRegression
+model = LogisticRegression()
+rfe = RFE(model, 3)
+fit = rfe.fit(train_set, train_labels)
+fit.n_features_
+fit.support_
+
+#6,4,100
+
+#PCA
+from sklearn.decomposition import PCA
+pca = PCA(n_components=4)
+fit = pca.fit(train_set)
+print(fit.components_)
